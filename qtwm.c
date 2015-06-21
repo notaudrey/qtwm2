@@ -69,7 +69,7 @@
 
 #ifdef DEBUG
 #define PDEBUG(Args...) \
-  do { fprintf(stderr, "mcwm: "); fprintf(stderr, ##Args); } while(0)
+  do { fprintf(stderr, "qtwm: "); fprintf(stderr, ##Args); } while(0)
 #define D(x) x
 #else
 #define PDEBUG(Args...)
@@ -326,18 +326,15 @@ static struct monitor *addmonitor(xcb_randr_output_t id, char *name,
                                   uint16_t height);
 static void raisewindow(xcb_drawable_t win);
 static void raiseorlower(struct client *client);
-//static void movelim(struct client *client);
 static void movewindow(xcb_drawable_t win, uint16_t x, uint16_t y);
 static struct client *findclient(xcb_drawable_t win);
 static void focusnext(bool reverse);
 static void setunfocus(xcb_drawable_t win);
 static void setfocus(struct client *client);
 static int start(char *program);
-static void resizelim(struct client *client);
 static void moveresize(xcb_drawable_t win, uint16_t x, uint16_t y,
                        uint16_t width, uint16_t height);
 static void resize(xcb_drawable_t win, uint16_t width, uint16_t height);
-static void resizestep(struct client *client, char direction);
 static void mousemove(struct client *client, int rel_x, int rel_y);
 static void mouseresize(struct client *client, int rel_x, int rel_y);
 static void movestep(struct client *client, char direction);
@@ -345,7 +342,6 @@ static void setborders(struct client *client, int width);
 static void unmax(struct client *client);
 static void maximize(struct client *client);
 static void maxvert(struct client *client);
-static void hide(struct client *client);
 static bool getpointer(xcb_drawable_t win, int16_t *x, int16_t *y);
 static bool getgeom(xcb_drawable_t win, int16_t *x, int16_t *y, uint16_t *width,
                     uint16_t *height);
@@ -521,7 +517,7 @@ int32_t getwmdesktop(xcb_drawable_t win) {
 
     reply = xcb_get_property_reply(conn, cookie, NULL);
     if (NULL == reply) {
-        fprintf(stderr, "mcwm: Couldn't get properties for win %d\n", win);
+        fprintf(stderr, "qtwm: Couldn't get properties for win %d\n", win);
         return MCWM_NOWS;
     }
 
@@ -894,7 +890,7 @@ void newwin(xcb_window_t win) {
      */
     client = setupwin(win);
     if (NULL == client) {
-        fprintf(stderr, "mcwm: Couldn't set up window. Out of memory.\n");
+        fprintf(stderr, "qtwm: Couldn't set up window. Out of memory.\n");
         return;
     }
 
@@ -1094,7 +1090,7 @@ xcb_keycode_t keysymtokeycode(xcb_keysym_t keysym, xcb_key_symbols_t *keysyms) {
     /* We only use the first keysymbol, even if there are more. */
     keyp = xcb_key_symbols_get_keycode(keysyms, keysym);
     if (NULL == keyp) {
-        fprintf(stderr, "mcwm: Couldn't look up key. Exiting.\n");
+        fprintf(stderr, "qtwm: Couldn't look up key. Exiting.\n");
         exit(1);
         return 0;
     }
@@ -1162,15 +1158,7 @@ int setupkeys(void) {
         /* Grab other keys with a modifier mask. */
         xcb_grab_key(conn, 1, screen->root, MODKEY, keys[i].keycode,
                      XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
-
-        /*
-         * XXX Also grab it's shifted counterpart. A bit ugly here
-         * because we grab all of them not just the ones we want.
-         */
-        /*xcb_grab_key(conn, 1, screen->root, MODKEY | SHIFTMOD,
-                     keys[i].keycode,
-                     XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);*/
-    } /* for */
+    }
 
     /* Need this to take effect NOW! */
     xcb_flush(conn);
@@ -1943,47 +1931,6 @@ int start(char *program) {
     return 0;
 }
 
-/* Resize with limit. */
-void resizelim(struct client *client) {
-    int16_t mon_x;
-    int16_t mon_y;
-    uint16_t mon_width;
-    uint16_t mon_height;
-
-    if (NULL == client->monitor) {
-        mon_x = 0;
-        mon_y = 0;
-        mon_width = screen->width_in_pixels;
-        mon_height = screen->height_in_pixels;
-    } else {
-        mon_x = client->monitor->x;
-        mon_y = client->monitor->y;
-        mon_width = client->monitor->width;
-        mon_height = client->monitor->height;
-    }
-
-    /* Is it smaller than it wants to  be? */
-    if (0 != client->min_height && client->height < client->min_height) {
-        client->height = client->min_height;
-    }
-
-    if (0 != client->min_width && client->width < client->min_width) {
-        client->width = client->min_width;
-    }
-
-    if (client->x + client->width + conf.borderwidth * 2 > mon_x + mon_width) {
-        client->width = mon_width - ((client->x - mon_x) + conf.borderwidth
-                                     * 2);
-    }
-
-    if (client->y + client->height + conf.borderwidth * 2 > mon_y + mon_height) {
-        client->height = mon_height - ((client->y - mon_y) + conf.borderwidth
-                                       * 2);
-    }
-
-    resize(client->id, client->width, client->height);
-}
-
 void moveresize(xcb_drawable_t win, uint16_t x, uint16_t y,
                 uint16_t width, uint16_t height) {
     uint32_t values[4];
@@ -2029,78 +1976,6 @@ void resize(xcb_drawable_t win, uint16_t width, uint16_t height) {
 }
 
 /*
- * Resize window client in direction direction. Direction is:
- *
- * h = left, that is decrease width.
- *
- * j = down, that is, increase height.
- *
- * k = up, that is, decrease height.
- *
- * l = right, that is, increase width.
- */
-void resizestep(struct client *client, char direction) {
-    int step_x = MOVE_STEP;
-    int step_y = MOVE_STEP;
-
-    if (NULL == client) {
-        return;
-    }
-
-    if (client->maxed) {
-        /* Can't resize a fully maximized window. */
-        return;
-    }
-
-    raisewindow(client->id);
-
-    if (client->width_inc > 1) {
-        step_x = client->width_inc;
-    } else {
-        step_x = MOVE_STEP;
-    }
-
-    if (client->height_inc > 1) {
-        step_y = client->height_inc;
-    } else {
-        step_y = MOVE_STEP;
-    }
-
-    switch (direction) {
-    case 'h':
-        client->width = client->width - step_x;
-        break;
-
-    case 'j':
-        client->height = client->height + step_y;
-        break;
-
-    case 'k':
-        client->height = client->height - step_y;
-        break;
-
-    case 'l':
-        client->width = client->width + step_x;
-        break;
-
-    default:
-        PDEBUG("resizestep in unknown direction.\n");
-        break;
-    } /* switch direction */
-
-    resizelim(client);
-
-    /* If this window was vertically maximized, remember that it isn't now. */
-    if (client->vertmaxed) {
-        client->vertmaxed = false;
-    }
-
-    xcb_warp_pointer(conn, XCB_NONE, client->id, 0, 0, 0, 0,
-                     client->width / 2, client->height / 2);
-    xcb_flush(conn);
-}
-
-/*
  * Move window win as a result of pointer motion to coordinates
  * rel_x,rel_y.
  */
@@ -2124,7 +1999,8 @@ void mouseresize(struct client *client, int rel_x, int rel_y) {
            (client->width - client->base_width) / client->width_inc,
            (client->height - client->base_height) / client->height_inc);
 
-    resizelim(client);
+    resize(client->id, client->width, client->height);
+    
 
     /* If this window was vertically maximized, remember that it isn't now. */
     if (client->vertmaxed) {
@@ -2373,21 +2249,6 @@ void maxvert(struct client *client) {
 
     /* Remember that this client is vertically maximized. */
     client->vertmaxed = true;
-}
-
-void hide(struct client *client) {
-    long data[] = { XCB_ICCCM_WM_STATE_ICONIC, XCB_NONE };
-
-    /*
-     * Unmap window and declare iconic.
-     *
-     * Unmapping will generate an UnmapNotify event so we can forget
-     * about the window later.
-     */
-    xcb_unmap_window(conn, client->id);
-    xcb_change_property(conn, XCB_PROP_MODE_REPLACE, client->id,
-                        wm_state, wm_state, 32, 2, data);
-    xcb_flush(conn);
 }
 
 bool getpointer(xcb_drawable_t win, int16_t *x, int16_t *y) {
@@ -3070,7 +2931,7 @@ void events(void) {
                     break;
                 } else {
                     /* Something was seriously wrong with select(). */
-                    fprintf(stderr, "mcwm: select failed.");
+                    fprintf(stderr, "qtwm: select failed.");
                     cleanup(0);
                     exit(1);
                 }
@@ -3606,7 +3467,7 @@ void events(void) {
 }
 
 void printhelp(void) {
-    printf("mcwm: Usage: mcwm [-b]");
+    printf("qtwm: Usage: qtwm [-b]");
     printf("  -b means draw no borders\n");
 }
 
@@ -3654,17 +3515,17 @@ int main(int argc, char **argv) {
 
     /* We ignore child exists. Don't create zombies. */
     if (SIG_ERR == signal(SIGCHLD, SIG_IGN)) {
-        perror("mcwm: signal");
+        perror("qtwm: signal");
         exit(1);
     }
 
     if (SIG_ERR == signal(SIGINT, sigcatch)) {
-        perror("mcwm: signal");
+        perror("qtwm: signal");
         exit(1);
     }
 
     if (SIG_ERR == signal(SIGTERM, sigcatch)) {
-        perror("mcwm: signal");
+        perror("qtwm: signal");
         exit(1);
     }
 
@@ -3712,7 +3573,7 @@ int main(int argc, char **argv) {
 
     screen = iter.data;
     if (!screen) {
-        fprintf (stderr, "mcwm: Can't get the current screen. Exiting.\n");
+        fprintf (stderr, "qtwm: Can't get the current screen. Exiting.\n");
         xcb_disconnect(conn);
         exit(1);
     }
@@ -3739,14 +3600,14 @@ int main(int argc, char **argv) {
 
     /* Loop over all clients and set up stuff. */
     if (0 != setupscreen()) {
-        fprintf(stderr, "mcwm: Failed to initialize windows. Exiting.\n");
+        fprintf(stderr, "qtwm: Failed to initialize windows. Exiting.\n");
         xcb_disconnect(conn);
         exit(1);
     }
 
     /* Set up key bindings. */
     if (0 != setupkeys()) {
-        fprintf(stderr, "mcwm: Couldn't set up keycodes. Exiting.");
+        fprintf(stderr, "qtwm: Couldn't set up keycodes. Exiting.");
         xcb_disconnect(conn);
         exit(1);
     }
@@ -3785,7 +3646,7 @@ int main(int argc, char **argv) {
     xcb_flush(conn);
 
     if (NULL != error) {
-        fprintf(stderr, "mcwm: Can't get SUBSTRUCTURE REDIRECT. "
+        fprintf(stderr, "qtwm: Can't get SUBSTRUCTURE REDIRECT. "
                 "Error code: %d\n"
                 "Another window manager running? Exiting.\n",
                 error->error_code);
