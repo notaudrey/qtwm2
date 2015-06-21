@@ -337,7 +337,6 @@ static void moveresize(xcb_drawable_t win, uint16_t x, uint16_t y,
 static void resize(xcb_drawable_t win, uint16_t width, uint16_t height);
 static void mousemove(struct client *client, int rel_x, int rel_y);
 static void mouseresize(struct client *client, int rel_x, int rel_y);
-static void movestep(struct client *client, char direction);
 static void setborders(struct client *client, int width);
 static void unmax(struct client *client);
 static void maximize(struct client *client);
@@ -2004,63 +2003,6 @@ void mouseresize(struct client *client, int rel_x, int rel_y) {
     }
 }
 
-void movestep(struct client *client, char direction) {
-    int16_t start_x;
-    int16_t start_y;
-
-    if (NULL == client) {
-        return;
-    }
-
-    if (client->maxed) {
-        /* We can't move a fully maximized window. */
-        return;
-    }
-
-    /* Save pointer position so we can warp pointer here later. */
-    if (!getpointer(client->id, &start_x, &start_y)) {
-        return;
-    }
-
-    raisewindow(client->id);
-    switch (direction) {
-    case 'h':
-        client->x = client->x - MOVE_STEP;
-        break;
-
-    case 'j':
-        client->y = client->y + MOVE_STEP;
-        break;
-
-    case 'k':
-        client->y = client->y - MOVE_STEP;
-        break;
-
-    case 'l':
-        client->x = client->x + MOVE_STEP;
-        break;
-
-    default:
-        PDEBUG("movestep: Moving in unknown direction.\n");
-        break;
-    } /* switch direction */
-
-    //movelim(client);
-    movewindow(client->id, client->x, client->y);
-
-    /*
-     * If the pointer was inside the window to begin with, move
-     * pointer back to where it was, relative to the window.
-     */
-    if (start_x > 0 - conf.borderwidth && start_x < client->width
-            + conf.borderwidth && start_y > 0 - conf.borderwidth && start_y
-            < client->height + conf.borderwidth) {
-        xcb_warp_pointer(conn, XCB_NONE, client->id, 0, 0, 0, 0,
-                         start_x, start_y);
-        xcb_flush(conn);
-    }
-}
-
 void setborders(struct client *client, int width) {
     uint32_t values[1];
     uint32_t mask = 0;
@@ -2411,22 +2353,6 @@ void handle_keypress(xcb_key_press_event_t *ev) {
 
     case KEY_F: /* f */
         fixwindow(focuswin, true);
-        break;
-
-    case KEY_H: /* h */
-        movestep(focuswin, 'h');
-        break;
-
-    case KEY_J: /* j */
-        movestep(focuswin, 'j');
-        break;
-
-    case KEY_K: /* k */
-        movestep(focuswin, 'k');
-        break;
-
-    case KEY_L: /* l */
-        movestep(focuswin, 'l');
         break;
 
     case KEY_TAB: /* tab */
