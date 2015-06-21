@@ -80,16 +80,16 @@
 /* Internal Constants. */
 
 /* We're currently moving a window with the mouse. */
-#define MCWM_MOVE 2
+#define QTWM_MOVE 2
 
 /* We're currently resizing a window with the mouse. */
-#define MCWM_RESIZE 3
+#define QTWM_RESIZE 3
 
 /*
  * We're currently tabbing around the window list, looking for a new
  * window to focus on.
  */
-#define MCWM_TABBING 4
+#define QTWM_TABBING 4
 
 /* Number of workspaces. */
 #define WORKSPACES 10
@@ -98,7 +98,7 @@
 #define NET_WM_FIXED 0xffffffff
 
 /* This means we didn't get any window hint at all. */
-#define MCWM_NOWS 0xfffffffe
+#define QTWM_NOWS 0xfffffffe
 
 
 /* Types. */
@@ -479,7 +479,7 @@ void setwmdesktop(xcb_drawable_t win, uint32_t ws) {
  * visible on.
  *
  * Returns either workspace, NET_WM_FIXED if this window should be
- * visible on all workspaces or MCWM_NOWS if we didn't find any hints.
+ * visible on all workspaces or QTWM_NOWS if we didn't find any hints.
  */
 int32_t getwmdesktop(xcb_drawable_t win) {
     xcb_get_property_reply_t *reply;
@@ -494,7 +494,7 @@ int32_t getwmdesktop(xcb_drawable_t win) {
     reply = xcb_get_property_reply(conn, cookie, NULL);
     if (NULL == reply) {
         fprintf(stderr, "qtwm: Couldn't get properties for win %d\n", win);
-        return MCWM_NOWS;
+        return QTWM_NOWS;
     }
 
     /* Length is 0 if we didn't find it. */
@@ -515,7 +515,7 @@ int32_t getwmdesktop(xcb_drawable_t win) {
 
 bad:
     free(reply);
-    return MCWM_NOWS;
+    return QTWM_NOWS;
 }
 
 /* Add a window, specified by client, to workspace ws. */
@@ -746,6 +746,23 @@ void fitonscreen(struct client *client) {
     uint16_t mon_height;
     bool willmove = false;
     bool willresize = false;
+
+    // Ugly hack because Chromium does really annoying behaviour with windows,
+    // which causes it to get moved back to the main display whenever you click
+    // inside the Chromium window.
+    // 
+    // // Pseudocode
+    // if(client->is_chromium) { 
+    //   return;
+    // }
+    xcb_get_property_cookie_t prop_cookie;
+    xcb_icccm_get_text_property_reply_t text_cookie;
+
+    prop_cookie = xcb_icccm_get_wm_class(conn, client->id);
+    xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
+    if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
+        return;
+    }
 
     client->vertmaxed = false;
 
@@ -1228,7 +1245,7 @@ int setupscreen(void) {
                     addtoworkspace(client, curws);
                     /* Add to all other workspaces. */
                     fixwindow(client, false);
-                } else if (MCWM_NOWS != ws && ws < WORKSPACES) {
+                } else if (QTWM_NOWS != ws && ws < WORKSPACES) {
                     addtoworkspace(client, ws);
                     /* If it's not our current workspace, hide it. */
                     if (ws != curws) {
@@ -1616,56 +1633,6 @@ void raiseorlower(struct client *client) {
     xcb_flush(conn);
 }
 
-/*void movelim(struct client *client)
-{
-     // I like being able to move windows across multiple monitors. This will be
-     // refactored out eventually.
-
-
-
-    int16_t mon_x;
-    int16_t mon_y;
-    uint16_t mon_width;
-    uint16_t mon_height;
-
-    if (NULL == client->monitor)
-    {
-        mon_x = 0;
-        mon_y = 0;
-        mon_width = screen->width_in_pixels;
-        mon_height = screen->height_in_pixels;
-    }
-    else
-    {
-        mon_x = client->monitor->x;
-        mon_y = client->monitor->y;
-        mon_width = client->monitor->width;
-        mon_height = client->monitor->height;
-    }
-
-    if (client->x < mon_x)
-    {
-        client->x = mon_x;
-    }
-    if (client->y < mon_y)
-    {
-        client->y = mon_y;
-    }
-
-    if (client->x + client->width > mon_x + mon_width - conf.borderwidth * 2)
-    {
-        client->x = (mon_x + mon_width - conf.borderwidth * 2) - client->width;
-    }
-
-    if (client->y + client->height > mon_y + mon_height - conf.borderwidth * 2)
-    {
-        client->y = (mon_y + mon_height - conf.borderwidth * 2)
-            - client->height;
-    }
-
-    movewindow(client->id, client->x, client->y);
-}*/
-
 /* Move window win to root coordinates x,y. */
 void movewindow(xcb_drawable_t win, uint16_t x, uint16_t y) {
     uint32_t values[2];
@@ -1699,14 +1666,14 @@ void focusnext(bool reverse) {
         return;
     }
 
-    if (MCWM_TABBING != mode) {
+    if (QTWM_TABBING != mode) {
         /*
          * Remember what we last focused on. We need this when the
          * MODKEY is released and we move the last focused window in
          * the tabbing order list.
          */
         lastfocuswin = focuswin;
-        mode = MCWM_TABBING;
+        mode = QTWM_TABBING;
 
         PDEBUG("Began tabbing.\n");
     }
@@ -1959,7 +1926,6 @@ void mousemove(struct client *client, int rel_x, int rel_y) {
     client->x = rel_x;
     client->y = rel_y;
 
-    //movelim(client);
     movewindow(client->id, client->x, client->y);
 }
 
@@ -2209,7 +2175,6 @@ void prevscreen(void) {
 
     raisewindow(focuswin->id);
     fitonscreen(focuswin);
-    //movelim(focuswin);
     movewindow(focuswin->id, focuswin->x, focuswin->y);
 
     xcb_warp_pointer(conn, XCB_NONE, focuswin->id, 0, 0, 0, 0,
@@ -2234,7 +2199,6 @@ void nextscreen(void) {
 
     raisewindow(focuswin->id);
     fitonscreen(focuswin);
-    //movelim(focuswin);
     movewindow(focuswin->id, focuswin->x, focuswin->y);
 
     xcb_warp_pointer(conn, XCB_NONE, focuswin->id, 0, 0, 0, 0,
@@ -2265,7 +2229,7 @@ void handle_keypress(xcb_key_press_event_t *ev) {
         return;
     }
 
-    if (MCWM_TABBING == mode && key != KEY_TAB && key != KEY_BACKTAB) {
+    if (QTWM_TABBING == mode && key != KEY_TAB && key != KEY_BACKTAB) {
         /* First finish tabbing around. Then deal with the next key. */
         finishtabbing();
     }
@@ -2762,7 +2726,7 @@ void events(void) {
 
                 /* Mouse button 1 was pressed. */
                 if (1 == e->detail) {
-                    mode = MCWM_MOVE;
+                    mode = QTWM_MOVE;
 
                     /*
                      * Warp pointer to upper left of window before
@@ -2773,7 +2737,7 @@ void events(void) {
                 } else {
                     /* Mouse button 3 was pressed. */
 
-                    mode = MCWM_RESIZE;
+                    mode = QTWM_RESIZE;
 
                     /* Warp pointer to lower right. */
                     xcb_warp_pointer(conn, XCB_NONE, focuswin->id, 0, 0, 0,
@@ -2836,9 +2800,9 @@ void events(void) {
              * Our pointer is moving and since we even get this event
              * we're either resizing or moving a window.
              */
-            if (mode == MCWM_MOVE) {
+            if (mode == QTWM_MOVE) {
                 mousemove(focuswin, pointer->root_x, pointer->root_y);
-            } else if (mode == MCWM_RESIZE) {
+            } else if (mode == QTWM_RESIZE) {
                 mouseresize(focuswin, pointer->root_x, pointer->root_y);
             } else {
                 PDEBUG("Motion event when we're not moving our resizing!\n");
@@ -2933,7 +2897,7 @@ void events(void) {
 
             PDEBUG("Key %d released.\n", e->detail);
 
-            if (MCWM_TABBING == mode) {
+            if (QTWM_TABBING == mode) {
                 /*
                  * Check if it's the that was released was a key
                  * generating the MODKEY mask.
@@ -2990,7 +2954,7 @@ void events(void) {
                      */
                     client = findclient(e->event);
                     if (NULL != client) {
-                        if (MCWM_TABBING != mode) {
+                        if (QTWM_TABBING != mode) {
                             /*
                              * We are focusing on a new window. Since
                              * we're not currently tabbing around the
