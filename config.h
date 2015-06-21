@@ -39,7 +39,7 @@
 #define USERKEY_MAXVERT 	XK_M
 #define USERKEY_RAISE 		XK_R
 #define USERKEY_TERMINAL 	XK_Return
-#define USERKEY_MAX 		XK_X
+#define USERKEY_MAX 		XK_Z
 #define USERKEY_CHANGE 		XK_Tab
 #define USERKEY_BACKCHANGE	XK_VoidSymbol
 #define USERKEY_WS1		XK_1
@@ -58,7 +58,7 @@
 #define USERKEY_TOPRIGHT        XK_U
 #define USERKEY_BOTLEFT         XK_B
 #define USERKEY_BOTRIGHT        XK_N
-#define USERKEY_DELETE          XK_End
+#define USERKEY_DELETE          XK_X
 #define USERKEY_PREVSCREEN      XK_comma
 #define USERKEY_NEXTSCREEN      XK_period
 #define USERKEY_ICONIFY         XK_I
