@@ -6,12 +6,7 @@
  */
 #define MOVE_STEP 32
 
-/*
- * Use this modifier combined with other keys to control wm from
- * keyboard. Default is Mod4, which on my keyboard is the Alt key but
- * is usually the Windows key on more normal keyboard layouts.
- */
-#define MODKEY XCB_MOD_MASK_4
+#define MODKEY XCB_MOD_MASK_1
 
 /* Extra modifier for resizing. Default is Shift. */
 #define SHIFTMOD XCB_MOD_MASK_SHIFT
@@ -23,20 +18,6 @@
 #define MOUSEMODKEY XCB_MOD_MASK_1
 
 #define DEBUG
-
-/*
- * Do we allow windows to be iconified? Set to true if you want this
- * behaviour to be default. Can also be set by calling mcwm with -i.
- */ 
-#define ALLOWICONS false
-
-/*
- * Start these programs when pressing MOUSEMODKEY and mouse buttons on
- * root window.
- */
-#define MOUSE1 ""
-#define MOUSE2 ""
-#define MOUSE3 "mcmenu"
 
 #define BORDERWIDTH 2
 

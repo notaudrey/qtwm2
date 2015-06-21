@@ -9,3 +9,5 @@ Notable changes:
 * Removed `movelim`'s functionality so that you can move windows across monitors. 
 * (Mostly) Moved all configuration to config.h. Command-line options are generally removed.
 * Remove some keybinding elements. 
+* Removed iconification.
+* Removed clicking on the root window to spawn programs. *May* be added back at some point.

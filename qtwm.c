@@ -287,7 +287,6 @@ struct conf
     uint32_t focuscol;          /* Focused border colour. */
     uint32_t unfocuscol;        /* Unfocused border colour.  */
     uint32_t fixedcol;          /* Fixed windows border colour. */
-    bool allowicons;            /* Allow windows to be unmapped. */    
 } conf;
 
 xcb_atom_t atom_desktop;        /*
@@ -337,7 +336,7 @@ static struct monitor *addmonitor(xcb_randr_output_t id, char *name,
                                   uint16_t height);
 static void raisewindow(xcb_drawable_t win);
 static void raiseorlower(struct client *client);
-static void movelim(struct client *client);
+//static void movelim(struct client *client);
 static void movewindow(xcb_drawable_t win, uint16_t x, uint16_t y);
 static struct client *findclient(xcb_drawable_t win);
 static void focusnext(bool reverse);
@@ -1831,14 +1830,14 @@ void raiseorlower(struct client *client)
     xcb_flush(conn);
 }
 
-void movelim(struct client *client)
+/*void movelim(struct client *client)
 {
-    /* I like being able to move windows across multiple monitors. This will be
-     * refactored out eventually. */
+     // I like being able to move windows across multiple monitors. This will be
+     // refactored out eventually.
 
 
 
-    /*int16_t mon_x;
+    int16_t mon_x;
     int16_t mon_y;
     uint16_t mon_width;
     uint16_t mon_height;
@@ -1856,10 +1855,9 @@ void movelim(struct client *client)
         mon_y = client->monitor->y;
         mon_width = client->monitor->width;
         mon_height = client->monitor->height;        
-    }*/
+    }
 
-    /* Is it outside the physical monitor? */
-    /*if (client->x < mon_x)
+    if (client->x < mon_x)
     {
         client->x = mon_x;
     }
@@ -1877,10 +1875,10 @@ void movelim(struct client *client)
     {
         client->y = (mon_y + mon_height - conf.borderwidth * 2)
             - client->height;
-    }*/    
+    }
 
     movewindow(client->id, client->x, client->y);
-}
+}*/
 
 /* Move window win to root coordinates x,y. */
 void movewindow(xcb_drawable_t win, uint16_t x, uint16_t y)
@@ -2353,7 +2351,8 @@ void mousemove(struct client *client, int rel_x, int rel_y)
     client->x = rel_x;
     client->y = rel_y;
     
-    movelim(client);
+    //movelim(client);
+    movewindow(client->id, client->x, client->y);
 }
 
 void mouseresize(struct client *client, int rel_x, int rel_y)
@@ -2424,7 +2423,8 @@ void movestep(struct client *client, char direction)
         break;
     } /* switch direction */
 
-    movelim(client);
+    //movelim(client);
+    movewindow(client->id, client->x, client->y);
     
     /*
      * If the pointer was inside the window to begin with, move
@@ -2941,7 +2941,8 @@ void prevscreen(void)
 
     raisewindow(focuswin->id);    
     fitonscreen(focuswin);
-    movelim(focuswin);
+    //movelim(focuswin);
+    movewindow(focuswin->id, focuswin->x, focuswin->y);
 
     xcb_warp_pointer(conn, XCB_NONE, focuswin->id, 0, 0, 0, 0,
                      0, 0);
@@ -2968,7 +2969,8 @@ void nextscreen(void)
 
     raisewindow(focuswin->id);    
     fitonscreen(focuswin);
-    movelim(focuswin);
+    //movelim(focuswin);
+    movewindow(focuswin->id, focuswin->x, focuswin->y);
 
     xcb_warp_pointer(conn, XCB_NONE, focuswin->id, 0, 0, 0, 0,
                      0, 0);
@@ -3152,13 +3154,6 @@ void handle_keypress(xcb_key_press_event_t *ev)
 
         case KEY_NEXTSCR:
             nextscreen();            
-            break;
-
-        case KEY_ICONIFY:
-            if (conf.allowicons)
-            {
-                hide(focuswin);
-            }
             break;
 
 	case KEY_PREVWS:
@@ -3557,31 +3552,31 @@ void events(void)
                    e->detail, (long)e->event, e->child, e->event_x,
                    e->event_y);
 
-            if (0 == e->child)
+            /*if (0 == e->child)
             {
-                /* Mouse click on root window. Start programs? */
+                // Mouse click on root window. Start programs?
 
                 switch (e->detail)
                 {
-                case 1: /* Mouse button one. */
+                case 1: // Mouse button one.
                     start(MOUSE1);
                     break;
 
-                case 2: /* Middle mouse button. */
+                case 2: // Middle mouse button.
                     start(MOUSE2);                    
                     break;
 
-                case 3: /* Mouse button three. */
+                case 3: // Mouse button three. 
                     start(MOUSE3);
                     break;
 
                 default:
                     break;
-                } /* switch */
+                }
 
-                /* Break out of event switch. */
+                // Break out of event switch. 
                 break;
-            }
+            }*/
             
             /*
              * If we don't have any currently focused window, we can't
@@ -3969,28 +3964,6 @@ void events(void)
             configurerequest((xcb_configure_request_event_t *) ev);
         break;
 
-        case XCB_CLIENT_MESSAGE:
-        {
-            xcb_client_message_event_t *e
-                = (xcb_client_message_event_t *)ev;
-
-            if (conf.allowicons)
-            {
-                if (e->type == wm_change_state
-                    && e->format == 32
-                    && e->data.data32[0] == XCB_ICCCM_WM_STATE_ICONIC)
-                {
-                    long data[] = { XCB_ICCCM_WM_STATE_ICONIC, XCB_NONE };
-
-                    /* Unmap window and declare iconic. */
-                    
-                    xcb_unmap_window(conn, e->window);
-                    xcb_change_property(conn, XCB_PROP_MODE_REPLACE, e->window,
-                                        wm_state, wm_state, 32, 2, data);
-                    xcb_flush(conn);
-                }
-            } /* if */
-        }
         break;
 
         case XCB_CIRCULATE_REQUEST:
@@ -4091,14 +4064,8 @@ void events(void)
 
 void printhelp(void)
 {
-    printf("mcwm: Usage: mcwm [-b] [-f colour] "
-           "[-u colour] [-x colour] \n");
+    printf("mcwm: Usage: mcwm [-b]");
     printf("  -b means draw no borders\n");
-    printf("  -t urxvt will start urxvt when MODKEY + Return is pressed\n");
-    printf("  -f colour sets colour for focused window borders of focused "
-           "to a named color.\n");
-    printf("  -u colour sets colour for unfocused window borders.");
-    printf("  -x color sets colour for fixed window borders.");    
 }
 
 void sigcatch(int sig)
@@ -4169,14 +4136,13 @@ int main(int argc, char **argv)
     /* Set up defaults. */
     
     conf.borderwidth = BORDERWIDTH;
-    conf.allowicons = ALLOWICONS;
     focuscol = FOCUSCOL;
     unfocuscol = UNFOCUSCOL;
     fixedcol = FIXEDCOL;
     
     while (1)
     {
-        ch = getopt(argc, argv, "b:it:f:u:x:");
+        ch = getopt(argc, argv, "b:i");
         if (-1 == ch)
         {
                 
@@ -4189,9 +4155,6 @@ int main(int argc, char **argv)
         case 'b':
             /* Border width */
             conf.borderwidth = atoi(optarg);            
-            break;
-        case 'i':
-            conf.allowicons = true;
             break;
         default:
             printhelp();
