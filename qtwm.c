@@ -2272,18 +2272,18 @@ void handle_keypress(xcb_key_press_event_t *ev) {
 
     if(ev->state & SHIFTMOD) {
         switch(key) {
-            case KEY_END:
-                deletewin();
-                break;
-            default:
-                break;
+        case KEY_END:
+            deletewin();
+            break;
+        case KEY_RET:
+            // config.h
+            start(LAUNCHER);
+            break;
+        default:
+            break;
         }
     } else {
         switch (key) {
-        case KEY_RET: /* return */
-            fprintf(stderr, "No terminal.");
-            break;
-
         case KEY_F: /* f */
             fixwindow(focuswin, true);
             break;

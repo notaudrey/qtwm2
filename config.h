@@ -27,13 +27,15 @@
 
 #define FIXEDCOL 0x0000FF
 
+#define LAUNCHER "dmenu_run"
+
 /*
  * Keysym codes for window operations. Look in X11/keysymdefs.h for
  * actual symbols. Use XK_VoidSymbol to disable a function.
  */
 #define USERKEY_FIX 		XK_F
 #define USERKEY_RAISE 		XK_R
-#define USERKEY_TERMINAL 	XK_Return
+#define USERKEY_TERMINAL 	XK_N
 #define USERKEY_MAX 		XK_Z
 #define USERKEY_CHANGE 		XK_Tab
 #define USERKEY_BACKCHANGE	XK_VoidSymbol
