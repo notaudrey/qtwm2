@@ -340,7 +340,6 @@ static void mouseresize(struct client *client, int rel_x, int rel_y);
 static void setborders(struct client *client, int width);
 static void unmax(struct client *client);
 static void maximize(struct client *client);
-static void maxvert(struct client *client);
 static bool getpointer(xcb_drawable_t win, int16_t *x, int16_t *y);
 static bool getgeom(xcb_drawable_t win, int16_t *x, int16_t *y, uint16_t *width,
                     uint16_t *height);
@@ -2132,63 +2131,6 @@ void maximize(struct client *client) {
     client->maxed = true;
 }
 
-void maxvert(struct client *client) {
-    uint32_t values[2];
-    int16_t mon_y;
-    uint16_t mon_height;
-
-    if (NULL == client) {
-        PDEBUG("maxvert: client was NULL\n");
-        return;
-    }
-
-    if (NULL == client->monitor) {
-        mon_y = 0;
-        mon_height = screen->height_in_pixels;
-    } else {
-        mon_y = client->monitor->y;
-        mon_height = client->monitor->height;
-    }
-
-    /*
-     * Check if maximized already. If so, revert to stored geometry.
-     */
-    if (client->vertmaxed) {
-        unmax(client);
-        client->vertmaxed = false;
-        return;
-    }
-
-    /* Raise first. Pretty silly to maximize below something else. */
-    raisewindow(client->id);
-
-    /*
-     * Store original coordinates and geometry.
-     * FIXME: Store in property as well?
-     */
-    client->origsize.x = client->x;
-    client->origsize.y = client->y;
-    client->origsize.width = client->width;
-    client->origsize.height = client->height;
-
-    client->y = mon_y;
-    /* Compute new height considering height increments and screen height. */
-    client->height = mon_height - conf.borderwidth * 2;
-    client->height -= (client->height - client->base_height)
-                      % client->height_inc;
-
-    /* Move to top of screen and resize. */
-    values[0] = client->y;
-    values[1] = client->height;
-
-    xcb_configure_window(conn, client->id, XCB_CONFIG_WINDOW_Y
-                         | XCB_CONFIG_WINDOW_HEIGHT, values);
-    xcb_flush(conn);
-
-    /* Remember that this client is vertically maximized. */
-    client->vertmaxed = true;
-}
-
 bool getpointer(xcb_drawable_t win, int16_t *x, int16_t *y) {
     xcb_query_pointer_reply_t *pointer;
 
@@ -2361,10 +2303,6 @@ void handle_keypress(xcb_key_press_event_t *ev) {
 
     case KEY_BACKTAB: /* backtab */
         focusnext(true);
-        break;
-
-    case KEY_M: /* m */
-        maxvert(focuswin);
         break;
 
     case KEY_R: /* r*/
