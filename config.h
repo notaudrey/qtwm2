@@ -32,11 +32,6 @@
  * actual symbols. Use XK_VoidSymbol to disable a function.
  */
 #define USERKEY_FIX 		XK_F
-#define USERKEY_MOVE_LEFT 	XK_H
-#define USERKEY_MOVE_DOWN 	XK_J
-#define USERKEY_MOVE_UP 	XK_K
-#define USERKEY_MOVE_RIGHT 	XK_L
-#define USERKEY_MAXVERT 	XK_M
 #define USERKEY_RAISE 		XK_R
 #define USERKEY_TERMINAL 	XK_Return
 #define USERKEY_MAX 		XK_Z
@@ -54,10 +49,6 @@
 #define USERKEY_WS10		XK_0
 #define USERKEY_PREVWS          XK_C
 #define USERKEY_NEXTWS          XK_V
-#define USERKEY_TOPLEFT         XK_Y
-#define USERKEY_TOPRIGHT        XK_U
-#define USERKEY_BOTLEFT         XK_B
-#define USERKEY_BOTRIGHT        XK_N
 #define USERKEY_DELETE          XK_X
 #define USERKEY_PREVSCREEN      XK_comma
 #define USERKEY_NEXTSCREEN      XK_period

@@ -106,11 +106,6 @@
 /* All our key shortcuts. */
 typedef enum {
     KEY_F,
-    KEY_H,
-    KEY_J,
-    KEY_K,
-    KEY_L,
-    KEY_M,
     KEY_R,
     KEY_RET,
     KEY_X,
@@ -126,10 +121,6 @@ typedef enum {
     KEY_8,
     KEY_9,
     KEY_0,
-    KEY_Y,
-    KEY_U,
-    KEY_B,
-    KEY_N,
     KEY_END,
     KEY_PREVSCR,
     KEY_NEXTSCR,
@@ -230,11 +221,6 @@ struct keys {
     xcb_keycode_t keycode;
 } keys[KEY_MAX] = {
     { USERKEY_FIX, 0 },
-    { USERKEY_MOVE_LEFT, 0 },
-    { USERKEY_MOVE_DOWN, 0 },
-    { USERKEY_MOVE_UP, 0 },
-    { USERKEY_MOVE_RIGHT, 0 },
-    { USERKEY_MAXVERT, 0 },
     { USERKEY_RAISE, 0 },
     { USERKEY_TERMINAL, 0 },
     { USERKEY_MAX, 0 },
@@ -250,10 +236,6 @@ struct keys {
     { USERKEY_WS8, 0 },
     { USERKEY_WS9, 0 },
     { USERKEY_WS10, 0 },
-    { USERKEY_TOPLEFT, 0 },
-    { USERKEY_TOPRIGHT, 0 },
-    { USERKEY_BOTLEFT, 0 },
-    { USERKEY_BOTRIGHT, 0 },
     { USERKEY_DELETE, 0 },
     { USERKEY_PREVSCREEN, 0 },
     { USERKEY_NEXTSCREEN, 0 },
@@ -1994,7 +1976,7 @@ void mouseresize(struct client *client, int rel_x, int rel_y) {
            (client->height - client->base_height) / client->height_inc);
 
     resize(client->id, client->width, client->height);
-    
+
 
     /* If this window was vertically maximized, remember that it isn't now. */
     if (client->vertmaxed) {
@@ -2288,100 +2270,109 @@ void handle_keypress(xcb_key_press_event_t *ev) {
         finishtabbing();
     }
 
-    switch (key) {
-    case KEY_RET: /* return */
-        fprintf(stderr, "No terminal.");
-        break;
-
-    case KEY_F: /* f */
-        fixwindow(focuswin, true);
-        break;
-
-    case KEY_TAB: /* tab */
-        focusnext(false);
-        break;
-
-    case KEY_BACKTAB: /* backtab */
-        focusnext(true);
-        break;
-
-    case KEY_R: /* r*/
-        raiseorlower(focuswin);
-        break;
-
-    case KEY_X: /* x */
-        maximize(focuswin);
-        break;
-
-    case KEY_1:
-        changeworkspace(0);
-        break;
-
-    case KEY_2:
-        changeworkspace(1);
-        break;
-
-    case KEY_3:
-        changeworkspace(2);
-        break;
-
-    case KEY_4:
-        changeworkspace(3);
-        break;
-
-    case KEY_5:
-        changeworkspace(4);
-        break;
-
-    case KEY_6:
-        changeworkspace(5);
-        break;
-
-    case KEY_7:
-        changeworkspace(6);
-        break;
-
-    case KEY_8:
-        changeworkspace(7);
-        break;
-
-    case KEY_9:
-        changeworkspace(8);
-        break;
-
-    case KEY_0:
-        changeworkspace(9);
-        break;
-
-    case KEY_END:
-        deletewin();
-        break;
-
-    case KEY_PREVSCR:
-        prevscreen();
-        break;
-
-    case KEY_NEXTSCR:
-        nextscreen();
-        break;
-
-    case KEY_PREVWS:
-        if (curws > 0) {
-            changeworkspace(curws - 1);
-        } else {
-            changeworkspace(WORKSPACES - 1);
+    if(ev->state & SHIFTMOD) {
+        switch(key) {
+            case KEY_END:
+                deletewin();
+                break;
+            default:
+                break;
         }
-        break;
+    } else {
+        switch (key) {
+        case KEY_RET: /* return */
+            fprintf(stderr, "No terminal.");
+            break;
 
-    case KEY_NEXTWS:
-        changeworkspace((curws + 1) % WORKSPACES);
-        break;
+        case KEY_F: /* f */
+            fixwindow(focuswin, true);
+            break;
 
-    default:
-        /* Ignore other keys. */
-        break;
-    } /* switch unshifted */
-} /* handle_keypress() */
+        case KEY_TAB: /* tab */
+            focusnext(false);
+            break;
+
+        case KEY_BACKTAB: /* backtab */
+            focusnext(true);
+            break;
+
+        case KEY_R: /* r*/
+            raiseorlower(focuswin);
+            break;
+
+        case KEY_X: /* x */
+            maximize(focuswin);
+            break;
+
+        case KEY_1:
+            changeworkspace(0);
+            break;
+
+        case KEY_2:
+            changeworkspace(1);
+            break;
+
+        case KEY_3:
+            changeworkspace(2);
+            break;
+
+        case KEY_4:
+            changeworkspace(3);
+            break;
+
+        case KEY_5:
+            changeworkspace(4);
+            break;
+
+        case KEY_6:
+            changeworkspace(5);
+            break;
+
+        case KEY_7:
+            changeworkspace(6);
+            break;
+
+        case KEY_8:
+            changeworkspace(7);
+            break;
+
+        case KEY_9:
+            changeworkspace(8);
+            break;
+
+        case KEY_0:
+            changeworkspace(9);
+            break;
+
+        /*case KEY_END:
+            deletewin();
+            break;*/
+
+        case KEY_PREVSCR:
+            prevscreen();
+            break;
+
+        case KEY_NEXTSCR:
+            nextscreen();
+            break;
+
+        case KEY_PREVWS:
+            if (curws > 0) {
+                changeworkspace(curws - 1);
+            } else {
+                changeworkspace(WORKSPACES - 1);
+            }
+            break;
+
+        case KEY_NEXTWS:
+            changeworkspace((curws + 1) % WORKSPACES);
+            break;
+
+        default:
+            break;
+        }
+    }
+}
 
 /* Helper function to configure a window. */
 void configwin(xcb_window_t win, uint16_t mask, struct winconf wc) {
