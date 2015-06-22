@@ -21,11 +21,11 @@
 
 #define BORDERWIDTH 2
 
-#define FOCUSCOL 0x00FF00
+#define FOCUSCOL 0x4A90D9
 
-#define UNFOCUSCOL 0xFF0000
+#define UNFOCUSCOL 0x011234
 
-#define FIXEDCOL 0x0000FF
+#define FIXEDCOL 0x011278
 
 #define LAUNCHER "dmenu_run"
 

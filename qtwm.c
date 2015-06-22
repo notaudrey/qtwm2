@@ -750,9 +750,9 @@ void fitonscreen(struct client *client) {
     // Ugly hack because Chromium does really annoying behaviour with windows,
     // which causes it to get moved back to the main display whenever you click
     // inside the Chromium window.
-    // 
+    //
     // // Pseudocode
-    // if(client->is_chromium) { 
+    // if(client->is_chromium) {
     //   return;
     // }
     xcb_get_property_cookie_t prop_cookie;
@@ -761,6 +761,7 @@ void fitonscreen(struct client *client) {
     prop_cookie = xcb_icccm_get_wm_class(conn, client->id);
     xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
     if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
+        PDEBUG("Found a Chromium, am will skip!");
         return;
     }
 
@@ -909,8 +910,22 @@ void newwin(xcb_window_t win) {
 
         client->x = pointx;
         client->y = pointy;
-
-        movewindow(client->id, client->x, client->y);
+        // Ugly hack because Chromium does really annoying behaviour with windows,
+        // which causes it to get moved back to the main display whenever you click
+        // inside the Chromium window.
+        //
+        // // Pseudocode
+        // if(client->is_chromium) {
+        //   return;
+        // }
+        xcb_get_property_cookie_t prop_cookie;
+        xcb_icccm_get_text_property_reply_t text_cookie;
+    
+        prop_cookie = xcb_icccm_get_wm_class(conn, client->id);
+        xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
+        if(!(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0)) {
+            movewindow(client->id, client->x, client->y);
+        }
     } else {
         PDEBUG("User set coordinates.\n");
     }
@@ -1877,6 +1892,24 @@ int start(char *program) {
 void moveresize(xcb_drawable_t win, uint16_t x, uint16_t y,
                 uint16_t width, uint16_t height) {
     uint32_t values[4];
+
+    // Ugly hack because Chromium does really annoying behaviour with windows,
+    // which causes it to get moved back to the main display whenever you click
+    // inside the Chromium window.
+    //
+    // // Pseudocode
+    // if(client->is_chromium) {
+    //   return;
+    // }
+    xcb_get_property_cookie_t prop_cookie;
+    xcb_icccm_get_text_property_reply_t text_cookie;
+
+    prop_cookie = xcb_icccm_get_wm_class(conn, win);
+    xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
+    if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
+        PDEBUG("Found a Chromium, am will skip!");
+        return;
+    }
 
     if (screen->root == win || 0 == win) {
         /* Can't move or resize root. */
