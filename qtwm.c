@@ -761,8 +761,7 @@ void fitonscreen(struct client *client) {
 
     prop_cookie = xcb_icccm_get_wm_class(conn, client->id);
     xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
-    fprintf(stderr, "found cookie: %s", text_cookie.name);
-    if(text_cookie.name  != NULL) {
+    if(text_cookie.name != NULL) {
         if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
             PDEBUG("Found a Chromium, am will skip!");
             return;
