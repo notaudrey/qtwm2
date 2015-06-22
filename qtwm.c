@@ -329,6 +329,7 @@ static void deletewin(void);
 static void prevscreen(void);
 static void nextscreen(void);
 static void handle_keypress(xcb_key_press_event_t *ev);
+static void movetoworkspace(struct client* client, uint32_t ws);
 static void configwin(xcb_window_t win, uint16_t mask, struct winconf wc);
 static void configurerequest(xcb_configure_request_event_t *e);
 static void events(void);
@@ -760,9 +761,12 @@ void fitonscreen(struct client *client) {
 
     prop_cookie = xcb_icccm_get_wm_class(conn, client->id);
     xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
-    if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
-        PDEBUG("Found a Chromium, am will skip!");
-        return;
+    fprintf(stderr, "found cookie: %s", text_cookie.name);
+    if(text_cookie.name  != NULL) {
+        if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
+            PDEBUG("Found a Chromium, am will skip!");
+            return;
+        }
     }
 
     client->vertmaxed = false;
@@ -792,7 +796,7 @@ void fitonscreen(struct client *client) {
     PDEBUG("Is window outside monitor?\n");
     PDEBUG("x: %d between %d and %d?\n", client->x, mon_x, mon_x + mon_width);
     PDEBUG("y: %d between %d and %d?\n", client->y, mon_y, mon_y + mon_height);
-
+#if 0
     /* Is it outside the physical monitor? */
     if (client->x > mon_x + mon_width) {
         client->x = mon_x + mon_width - client->width;
@@ -811,7 +815,7 @@ void fitonscreen(struct client *client) {
         client->y = mon_y;
         willmove = true;
     }
-
+#endif
     /* Is it smaller than it wants to  be? */
     if (0 != client->min_height && client->height < client->min_height) {
         client->height = client->min_height;
@@ -822,7 +826,7 @@ void fitonscreen(struct client *client) {
         client->width = client->min_width;
         willresize = true;
     }
-
+#if 0
     /*
      * If the window is larger than our screen, just place it in the
      * corner and resize.
@@ -849,7 +853,7 @@ void fitonscreen(struct client *client) {
                                           * 2);
         willmove = true;
     }
-
+#endif
     if (willmove) {
         PDEBUG("Moving to %d,%d.\n", client->x, client->y);
         movewindow(client->id, client->x, client->y);
@@ -920,11 +924,14 @@ void newwin(xcb_window_t win) {
         // }
         xcb_get_property_cookie_t prop_cookie;
         xcb_icccm_get_text_property_reply_t text_cookie;
-    
+
         prop_cookie = xcb_icccm_get_wm_class(conn, client->id);
         xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
-        if(!(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0)) {
-            movewindow(client->id, client->x, client->y);
+        if(text_cookie.name != NULL) {
+            if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
+                PDEBUG("Found a Chromium, doing the magick!");
+                movewindow(client->id, client->x, client->y);
+            }
         }
     } else {
         PDEBUG("User set coordinates.\n");
@@ -1906,9 +1913,11 @@ void moveresize(xcb_drawable_t win, uint16_t x, uint16_t y,
 
     prop_cookie = xcb_icccm_get_wm_class(conn, win);
     xcb_icccm_get_text_property_reply(conn, prop_cookie, &text_cookie, NULL);
-    if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
-        PDEBUG("Found a Chromium, am will skip!");
-        return;
+    if(text_cookie.name != NULL) {
+        if(strncmp(text_cookie.name, "Chromium", strlen("Chromium")) == 0) {
+            PDEBUG("Found a Chromium, am will skip!");
+            return;
+        }
     }
 
     if (screen->root == win || 0 == win) {
@@ -2276,6 +2285,45 @@ void handle_keypress(xcb_key_press_event_t *ev) {
             // config.h
             start(LAUNCHER);
             break;
+        case KEY_1:
+            movetoworkspace(focuswin, 0);
+            break;
+
+        case KEY_2:
+            movetoworkspace(focuswin, 1);
+            break;
+
+        case KEY_3:
+            movetoworkspace(focuswin, 2);
+            break;
+
+        case KEY_4:
+            movetoworkspace(focuswin, 3);
+            break;
+
+        case KEY_5:
+            movetoworkspace(focuswin, 4);
+            break;
+
+        case KEY_6:
+            movetoworkspace(focuswin, 5);
+            break;
+
+        case KEY_7:
+            movetoworkspace(focuswin, 6);
+            break;
+
+        case KEY_8:
+            movetoworkspace(focuswin, 7);
+            break;
+
+        case KEY_9:
+            movetoworkspace(focuswin, 8);
+            break;
+
+        case KEY_0:
+            movetoworkspace(focuswin, 9);
+            break;
         default:
             break;
         }
@@ -2369,6 +2417,13 @@ void handle_keypress(xcb_key_press_event_t *ev) {
             break;
         }
     }
+}
+
+static void movetoworkspace(struct client* client, uint32_t ws) {
+    // Remove from current workspace
+    delfromworkspace(client, curws);
+    // Add to new workspace
+    addtoworkspace(client, ws);
 }
 
 /* Helper function to configure a window. */
@@ -2511,7 +2566,7 @@ void configurerequest(xcb_configure_request_event_t *e) {
         }
 
         /* Check if window fits on screen after resizing. */
-
+#if 0
         if (client->x + client->width + 2 * conf.borderwidth
                 > mon_x + mon_width) {
             /*
@@ -2550,7 +2605,7 @@ void configurerequest(xcb_configure_request_event_t *e) {
                 client->height = mon_height - 2 * conf.borderwidth;
             }
         }
-
+#endif
         moveresize(client->id, client->x, client->y, client->width,
                    client->height);
     } else {

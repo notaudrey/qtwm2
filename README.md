@@ -11,3 +11,4 @@ Notable changes:
 * Remove some keybinding elements. 
 * Removed iconification.
 * Removed clicking on the root window to spawn programs. *May* be added back at some point.
+* Added ability to move windows between workspaces.
