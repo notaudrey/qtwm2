@@ -17,7 +17,7 @@
  */
 #define MOUSEMODKEY XCB_MOD_MASK_1
 
-//#define DEBUG
+#define DEBUG
 
 #define BORDERWIDTH 2
 

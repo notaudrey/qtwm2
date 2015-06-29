@@ -2660,6 +2660,7 @@ void events(void) {
              * like a disconnected X server.
              */
             if (xcb_connection_has_error(conn)) {
+                PDEBUG("Unrecoverable X error, aborting!");
                 cleanup(0);
                 exit(1);
             }
@@ -2667,6 +2668,7 @@ void events(void) {
             found = select(fd + 1, &in, NULL, NULL, NULL);
             if (-1 == found) {
                 if (EINTR == errno) {
+                    PDEBUG("errno == EINTR, breaking!");
                     /* We received a signal. Break out of loop. */
                     break;
                 } else {
@@ -2681,7 +2683,7 @@ void events(void) {
             }
         }
 
-#ifdef DEBUG
+#ifdef DEBUG 
         if (ev->response_type <= MAXEVENTS) {
             PDEBUG("Event: %s\n", evnames[ev->response_type]);
         } else {
